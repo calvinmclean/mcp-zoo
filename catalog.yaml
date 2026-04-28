@@ -204,3 +204,391 @@
     - name: reflect
       description: Returns argv, env, cwd, pid, transport, and the inbound HTTP request headers.
       params: {}
+
+# ────────────────────────────────────────────────────────────────────────────
+# Template-reference entries
+#
+# These exercise the obot validator that requires every env var referenced
+# from a ${VAR} expansion in command/args/URL fields to be marked
+# required=true. Without that contract, an optional+missing env produces a
+# literal "${VAR}" string at runtime — broken at the wire. The validator
+# fails the catalog sync if any templated var is required=false, so these
+# entries are also a positive test that the contract holds end-to-end.
+#
+# What each entry verifies:
+#   - Reflect NPX (Templated Args):       plain-env ${VAR} expanded by nanobot
+#   - Reflect NPX (Bound + Templated):    K8s-Secret-bound ${VAR} expanded by nanobot
+#   - Reflect Containerized (Templated):  documents the kubelet ${VAR}/$(VAR)
+#                                         syntax-mismatch gap — argv ships the
+#                                         literal "${REFLECT_CONT_TAG}" today
+# ────────────────────────────────────────────────────────────────────────────
+
+- name: Reflect NPX (Templated Args)
+  shortDescription: Debug MCP server — npx args carry ${VAR} expanded by nanobot
+  description: |
+    Reflect MCP server (npx variant). Verifies that nanobot expands ${VAR}
+    references inside the npx args list using env vars configured on this
+    catalog entry.
+
+    The `--reflect-tag=${REFLECT_NPX_TAG}` arg is substituted by nanobot at
+    spawn time using the projected env. Call `reflect` and confirm
+    `argv` contains `--reflect-tag=<your value>`, not the literal placeholder.
+
+    The obot validator requires REFLECT_NPX_TAG to be `required: true`
+    because it is referenced from a template — otherwise an unset value
+    would ship as the literal string "${REFLECT_NPX_TAG}".
+  metadata:
+    categories: Developer Tools
+  icon: https://avatars.githubusercontent.com/u/4175918?v=4
+  repoURL: https://github.com/njhale/mcp-zoo
+  runtime: npx
+  npxConfig:
+    package: "@njhale/reflect-mcp"
+    args:
+      - --transport
+      - stdio
+      - --reflect-tag=${REFLECT_NPX_TAG}
+      - hello-from-template
+  env:
+    - key: REFLECT_NPX_TAG
+      name: Reflect NPX Tag
+      description: |
+        Substituted into the --reflect-tag arg via nanobot's ${VAR} expansion.
+        Required because it's referenced from a template — the obot
+        validator rejects required=false on templated vars.
+      required: true
+      sensitive: false
+  toolPreview:
+    - name: reflect
+      description: Returns argv, env, cwd, pid, transport, and (for HTTP) request headers.
+      params: {}
+
+- name: Reflect NPX (Bound + Templated Args)
+  shortDescription: Debug MCP server — npx args templated by Kubernetes-Secret-bound env
+  description: |
+    Reflect MCP server (npx variant). Verifies the full secret-binding
+    path through to template expansion.
+
+    The `--reflect-tag=${REFLECT_BOUND_TAG}` arg references an env var that
+    is itself bound to a key in a pre-existing Kubernetes Secret via
+    `secretBinding`. Kubelet projects the value onto the nanobot pod's env
+    via `valueFrom.secretKeyRef`; nanobot reads it via `os.Environ()` at
+    startup and substitutes it into the args before spawning the npx child.
+
+    Pre-create the Secret in the obot MCP deployments namespace before
+    installing this server:
+
+        kubectl -n <mcp-namespace> create secret generic reflect-mcp-creds \
+          --from-literal=reflect_npx_tag='hello-from-the-vault'
+
+    After install, call `reflect` and check `argv` — you should see
+    `--reflect-tag=hello-from-the-vault`. Obot never sees the value.
+
+    `required: true` matters here for two reasons:
+      1. The obot validator requires it because the env is templated.
+      2. With `required: false` and a missing Secret/key, kubelet would
+         start the pod with the env unset, nanobot's `envvar.ReplaceString`
+         would fall through, and the literal "${REFLECT_BOUND_TAG}" would
+         end up in argv. With `required: true`, kubelet refuses to start
+         the pod and obot's deployment controller surfaces the error.
+  metadata:
+    categories: Developer Tools
+  icon: https://avatars.githubusercontent.com/u/4175918?v=4
+  repoURL: https://github.com/njhale/mcp-zoo
+  runtime: npx
+  npxConfig:
+    package: "@njhale/reflect-mcp"
+    args:
+      - --transport
+      - stdio
+      - --reflect-tag=${REFLECT_BOUND_TAG}
+      - hello-from-bound-template
+  env:
+    - key: REFLECT_BOUND_TAG
+      name: Reflect Bound Tag (Kubernetes Secret-bound)
+      description: |
+        Bound to a key in a pre-existing K8s Secret. Required=true so the
+        pod fails closed at startup if the Secret/key is missing, AND so
+        the obot template-reference validator accepts it.
+      required: true
+      sensitive: true
+      secretBinding:
+        name: reflect-mcp-creds
+        key: reflect_npx_tag
+  toolPreview:
+    - name: reflect
+      description: Returns argv, env, cwd, pid, transport, and (for HTTP) request headers.
+      params: {}
+
+- name: Reflect Containerized (Templated Args — Known Gap)
+  shortDescription: Debug MCP server — containerized args templated by env (currently broken)
+  description: |
+    Reflect MCP server (containerized variant). Documents the gap in obot's
+    containerized runtime: kubelet only expands `$(VAR_NAME)` syntax in
+    PodSpec command/args, not `${VAR}`, and obot writes the `${VAR}` form
+    directly into the spec.
+
+    With this entry, `--reflect-tag=${REFLECT_CONT_TAG}` ships *literally*
+    to the container. Call `reflect` and you'll see
+    `--reflect-tag=${REFLECT_CONT_TAG}` in `argv`, NOT the configured value.
+
+    Use this entry to verify any future fix that rewrites `${VAR}` →
+    `$(VAR)` for bound and unbound template references in containerized
+    command/args.
+
+    Note: the obot template-reference validator still requires
+    REFLECT_CONT_TAG to be `required: true` — the manifest-level contract
+    holds even though the runtime path is broken.
+  metadata:
+    categories: Developer Tools
+    allow-multiple: "true"
+  icon: https://avatars.githubusercontent.com/u/4175918?v=4
+  repoURL: https://github.com/njhale/mcp-zoo
+  runtime: containerized
+  containerizedConfig:
+    image: ghcr.io/njhale/mcp-zoo/reflect-mcp:main
+    port: 8099
+    path: /mcp
+    args:
+      - --transport
+      - http-streamable
+      - --port
+      - "8099"
+      - --path
+      - /mcp
+      - --reflect-tag=${REFLECT_CONT_TAG}
+      - hello-from-containerized-template
+  env:
+    - key: REFLECT_CONT_TAG
+      name: Reflect Containerized Tag
+      description: |
+        Should appear substituted in argv via template expansion, but
+        currently ships as the literal string "${REFLECT_CONT_TAG}" due
+        to the kubelet `${VAR}` vs `$(VAR_NAME)` syntax mismatch. The env
+        var IS projected onto the container's env (so `env` in the reflect
+        output will show its value) — only argv expansion is broken.
+      required: true
+      sensitive: false
+  toolPreview:
+    - name: reflect
+      description: Returns argv, env, cwd, pid, transport, and the inbound HTTP request headers.
+      params: {}
+
+- name: Reflect Containerized (Bound + Templated Args — Known Gap)
+  shortDescription: Debug MCP server — containerized args templated by Kubernetes-Secret-bound env (currently broken)
+  description: |
+    Reflect MCP server (containerized variant). Combines two gaps:
+
+      1. Containerized command/args use kubelet's `$(VAR_NAME)` substitution
+         syntax, NOT `${VAR}`. obot writes `${VAR}` literally into PodSpec,
+         so the literal placeholder reaches argv.
+      2. The env var is bound to a Kubernetes Secret. The bound value IS
+         projected onto the container's env via valueFrom.secretKeyRef
+         (visible in `reflect`'s `env` output), but argv expansion is broken
+         independently of how the value got into the env.
+
+    Pre-create the Secret in the obot MCP deployments namespace before
+    installing:
+
+        kubectl -n <mcp-namespace> create secret generic reflect-mcp-creds \
+          --from-literal=reflect_cont_bound_tag='hello-from-the-vault'
+
+    Call `reflect`. Expected today:
+      - argv:    contains `--reflect-tag=${REFLECT_CONT_BOUND_TAG}` (literal!)
+      - env:     contains `REFLECT_CONT_BOUND_TAG=hello-from-the-vault`
+
+    Use this entry to verify any future fix that rewrites `${VAR}` →
+    `$(VAR)` for bound and unbound template references in containerized
+    cmd/args. After the fix, argv should contain
+    `--reflect-tag=hello-from-the-vault`.
+  metadata:
+    categories: Developer Tools
+    allow-multiple: "true"
+  icon: https://avatars.githubusercontent.com/u/4175918?v=4
+  repoURL: https://github.com/njhale/mcp-zoo
+  runtime: containerized
+  containerizedConfig:
+    image: ghcr.io/njhale/mcp-zoo/reflect-mcp:main
+    port: 8099
+    path: /mcp
+    args:
+      - --transport
+      - http-streamable
+      - --port
+      - "8099"
+      - --path
+      - /mcp
+      - --reflect-tag=${REFLECT_CONT_BOUND_TAG}
+      - hello-from-containerized-bound-template
+  env:
+    - key: REFLECT_CONT_BOUND_TAG
+      name: Reflect Containerized Bound Tag (Kubernetes Secret-bound)
+      description: |
+        Bound to a key in a pre-existing K8s Secret. Required=true so the
+        pod fails closed at startup if the Secret/key is missing AND so
+        the obot template-reference validator accepts it. The value will
+        appear in `env` but not (yet) substituted into argv.
+      required: true
+      sensitive: true
+      secretBinding:
+        name: reflect-mcp-creds
+        key: reflect_cont_bound_tag
+  toolPreview:
+    - name: reflect
+      description: Returns argv, env, cwd, pid, transport, and the inbound HTTP request headers.
+      params: {}
+
+- name: Reflect Remote (Bound URL Template — Known Gap)
+  shortDescription: Debug MCP server — urlTemplate hostname segment bound to a Kubernetes Secret (currently broken)
+  description: |
+    Reflect MCP server (remote variant). Uses `urlTemplate` — the correct
+    field for ${VAR}-bearing URLs (`fixedURL` is for literal URLs and is
+    not template-substituted).
+
+    The hostname's leading subdomain comes from a Kubernetes-Secret-bound
+    env: `urlTemplate: https://${SUB_DOMAIN}.hale.sh/mcp`. With the
+    Secret containing `sub_domain=reflect`, nanobot should dial
+    `https://reflect.hale.sh/mcp`. Currently it dials the literal
+    `https://${SUB_DOMAIN}.hale.sh/mcp`, DNS resolution fails, and the
+    connection errors out — failure is loud, which makes this a useful
+    smoke test.
+
+    Why it fails: obot's `applyURLTemplate` substitution at
+    server-configure time iterates the user-supplied `envVars` map
+    (pkg/api/handlers/mcp.go:1969), but bound envs are explicitly stripped
+    from that map first at line 1942 (`delete(envVars, env.Key)` for any
+    env with a SecretBinding). So `${SUB_DOMAIN}` never gets a value at
+    substitution time and the literal placeholder survives into the stored
+    `RemoteRuntimeConfig.URL`. Nanobot doesn't re-expand pure-remote URLs
+    at runtime either — `runner.go:66`'s
+    `envvar.ReplaceString(currentEnv, config.BaseURL)` only fires inside
+    the `Command != ""` branch.
+
+    Pre-create the Secret in the obot MCP deployments namespace before
+    installing:
+
+        kubectl -n <mcp-namespace> create secret generic reflect-mcp-creds \
+          --from-literal=sub_domain='reflect'
+
+    A future fix needs to either include bound-env values in
+    `applyURLTemplate`'s envVars (which defeats the "obot never sees the
+    value" property of secret bindings) or grow nanobot a URL-expansion
+    pass on the pure-remote path that picks up the projected env.
+  metadata:
+    categories: Developer Tools
+    allow-multiple: "true"
+  icon: https://avatars.githubusercontent.com/u/4175918?v=4
+  repoURL: https://github.com/njhale/mcp-zoo
+  runtime: remote
+  remoteConfig:
+    urlTemplate: https://${SUB_DOMAIN}.hale.sh/mcp
+    headers: []
+  env:
+    - key: SUB_DOMAIN
+      name: Reflect subdomain (Kubernetes Secret-bound)
+      description: |
+        Subdomain spliced into the urlTemplate. Bound to a key in a
+        pre-existing K8s Secret. Required=true to satisfy the obot
+        template-reference validator. Today its value never reaches the
+        dialed URL because bound envs are stripped from applyURLTemplate's
+        envVars map and nanobot doesn't re-expand pure-remote URLs.
+      required: true
+      sensitive: true
+      secretBinding:
+        name: reflect-mcp-creds
+        key: sub_domain
+  toolPreview:
+    - name: reflect
+      description: Returns argv, env, cwd, pid, transport, and the inbound HTTP request headers.
+      params: {}
+
+- name: Reflect Remote (Header Prefix Cases)
+  shortDescription: Debug MCP server — exercises header `prefix:` across static / user-supplied / bound headers
+  description: |
+    Reflect MCP server (remote variant). Three headers, all carrying
+    `prefix: "Bearer "`, exercised across the three value-source code
+    paths so each can be inspected via `reflect`'s `headers` field:
+
+      1. `Authorization-Static`  — static `value:` baked into the catalog.
+                                   `applyPrefix` is intentionally NOT applied
+                                   when `value:` is set (the static value is
+                                   trusted to already include any prefix it
+                                   needs), so the wire value is whatever you
+                                   put in `value:`.
+      2. `Authorization-User`    — user-supplied at install time. obot's
+                                   `applyPrefix` runs on the credEnv path,
+                                   so the wire value is "Bearer <your value>"
+                                   (assuming you don't supply a value that
+                                   already starts with "Bearer ").
+      3. `Authorization-Bound`   — Kubernetes Secret-bound. CURRENTLY BROKEN:
+                                   `configureRemoteRuntime` skips
+                                   `applyPrefix` on the secretBinding branch
+                                   in pkg/mcp/types.go. The wire value is
+                                   the raw Secret value with NO "Bearer "
+                                   prefix.
+
+    Pre-create the Secret in the obot MCP deployments namespace before
+    installing:
+
+        kubectl -n <mcp-namespace> create secret generic reflect-mcp-creds \
+          --from-literal=reflect_prefix_token='ABC123'
+
+    After install, call `reflect` and inspect `headers`. Expected today:
+      authorization-static: "Bearer hello-from-static"
+      authorization-user:   "Bearer <whatever you supplied>"
+      authorization-bound:  "ABC123"     (NO prefix — known gap)
+
+    Use this entry to verify any future fix that propagates `prefix:`
+    through the header-binding branch (e.g. by emitting
+    `Authorization-Bound=Bearer ${REFLECT_PREFIX_TOKEN}` in the
+    serverConfig.Headers slice and letting nanobot substitute the
+    placeholder inside).
+  metadata:
+    categories: Developer Tools
+    allow-multiple: "true"
+  icon: https://avatars.githubusercontent.com/u/4175918?v=4
+  repoURL: https://github.com/njhale/mcp-zoo
+  runtime: remote
+  remoteConfig:
+    fixedURL: https://reflect.hale.sh/mcp
+    headers:
+      - key: Authorization-Static
+        name: Authorization (static + prefix)
+        description: |
+          Static value with a prefix declared. `applyPrefix` is skipped
+          when `value:` is non-empty, so the wire value equals `value:`
+          verbatim — this header is here to confirm that behavior.
+        value: Bearer hello-from-static
+        prefix: "Bearer "
+        required: false
+        sensitive: false
+
+      - key: Authorization-User
+        name: Authorization (user-supplied + prefix)
+        description: |
+          User supplies the raw token at install time. obot's `applyPrefix`
+          runs on the credEnv path, so the value sent is
+          "Bearer <your value>" unless you already supply a value
+          starting with "Bearer ".
+        prefix: "Bearer "
+        required: false
+        sensitive: true
+
+      - key: Authorization-Bound
+        name: Authorization (Kubernetes Secret-bound + prefix — known gap)
+        description: |
+          Bound to a key in a pre-existing K8s Secret AND has a `prefix:`
+          declared. `configureRemoteRuntime` currently skips applyPrefix on
+          the binding branch, so the prefix is dropped — the wire value is
+          the raw Secret value. Required=true so the pod fails closed if
+          the Secret/key is missing.
+        prefix: "Bearer "
+        required: true
+        sensitive: true
+        secretBinding:
+          name: reflect-mcp-creds
+          key: reflect_prefix_token
+  toolPreview:
+    - name: reflect
+      description: Returns argv, env, cwd, pid, transport, and the inbound HTTP request headers.
+      params: {}
