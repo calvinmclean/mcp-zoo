@@ -111,21 +111,40 @@
       params: {}
 
 - name: Reflect Remote
-  shortDescription: Debug MCP server — remote runtime (HTTP, hosted)
+  shortDescription: Debug MCP server — remote runtime (HTTP, hosted) with a Kubernetes-Secret-bound header
   description: |
     Reflect MCP server (remote variant). Points at the hosted instance at
-    `https://reflect.hale.sh/mcp`. Nanobot acts as the proxy and
-    forwards each MCP request — synthesizing the configured headers — to the
+    `https://reflect.hale.sh/mcp`. Nanobot acts as the proxy and forwards
+    each MCP request — synthesizing the configured headers — to the
     remote URL. The `echo` tool returns:
 
       - the command and args the remote process was launched with
-      - the environment of the remote process
       - the headers nanobot sent to the remote (so you can confirm that
         static headers, user-supplied headers, and headers backed by
         Kubernetes Secret bindings are all propagated correctly)
 
-    The two test headers below let you validate static-value and
-    user-supplied-sensitive-value paths without needing real credentials.
+    Three header code paths are exercised here:
+
+      1. `X-Reflect-Test`     — static value baked into this catalog entry.
+      2. `X-Reflect-User`     — user-supplied at install time (sensitive).
+      3. `X-Reflect-Token`    — bound to a pre-existing Kubernetes Secret
+         via the `secretBinding` field below. Obot never sees the value;
+         kubelet projects it onto the nanobot proxy pod's env via
+         `valueFrom.secretKeyRef`, and nanobot substitutes it into the
+         outbound header at request time using its `${ENV_VAR}` expansion.
+
+    To exercise the binding path, pre-create a Secret in the obot MCP
+    deployments namespace before installing this server:
+
+        kubectl -n <mcp-namespace> create secret generic reflect-mcp-creds \
+          --from-literal=x_reflect_token='hello-from-the-vault'
+
+    After install, call `echo` with the echo key (printed on stderr at
+    server startup) and check `headers["x-reflect-token"]` in the response —
+    you should see `hello-from-the-vault`. If the Secret/key is missing
+    when the pod starts, kubelet fails closed with `CreateContainerConfigError`
+    (because the binding is `required: true`), and obot surfaces that as
+    `PodStartup=False` on the deployment.
   metadata:
     categories: Developer Tools
     allow-multiple: "true"
@@ -138,21 +157,49 @@
       - key: X-Reflect-Test
         name: Reflect Test Header (static)
         description: |
-          Static header set by the catalog entry. The value is fixed and
-          baked into the catalog so every request sees the same value.
-          Useful for confirming the static-header code path.
+          Static header set by the catalog entry. Fixed across all installs.
+          Confirms the static-header code path through nanobot.
         value: hello-from-obot
         required: false
         sensitive: false
-      - key: X-Reflect-Token
-        name: Reflect Auth Token
+
+      - key: X-Reflect-User
+        name: Reflect User Header
         description: |
           User-supplied sensitive header. Configure a value at install time
-          (or back this with a `secretBinding` against a pre-existing
-          Kubernetes Secret) and `echo` will return it under
-          `headers["x-reflect-token"]`.
+          and `echo` will return it under `headers["x-reflect-user"]`.
+          Confirms the credential-store / envFrom code path.
         required: false
         sensitive: true
+
+      # ──────────────────────────────────────────────────────────────────
+      # External-secret integration — see obot-platform/obot#6180.
+      #
+      # `secretBinding` only validates inside catalogs synced from git
+      # (gitManaged=true). The whole-repo PAT-vs-binding path is enforced
+      # in obot's mcp validators; UI-created entries cannot introduce
+      # bindings.
+      #
+      # `required: true` matters: with `required: false` and a missing
+      # Secret/key, kubelet starts the pod with the env unset, nanobot's
+      # `envvar.ReplaceMap` falls through, and the literal string
+      # `${X_REFLECT_TOKEN}` ships on the wire as the header value. With
+      # `required: true`, kubelet refuses to start the pod and obot's
+      # deployment controller surfaces the error.
+      # ──────────────────────────────────────────────────────────────────
+      - key: X-Reflect-Token
+        name: Reflect Token Header (Kubernetes Secret-bound)
+        description: |
+          Header value bound to a key in a pre-existing Kubernetes Secret in
+          the obot MCP deployments namespace. Obot never reads the value —
+          it only writes a `valueFrom.secretKeyRef` onto the nanobot proxy
+          pod's env, and nanobot substitutes it into this header at request
+          time. Verify in `echo` under `headers["x-reflect-token"]`.
+        required: true
+        sensitive: true
+        secretBinding:
+          name: reflect-mcp-creds   # pre-existing K8s Secret name
+          key: x_reflect_token      # key within that Secret
   toolPreview:
     - name: echo
       description: Returns argv, env, cwd, pid, transport, and the inbound HTTP request headers.
