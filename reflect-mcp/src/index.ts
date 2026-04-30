@@ -23,6 +23,7 @@
  */
 
 import { randomUUID, timingSafeEqual } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -148,6 +149,42 @@ function isAuthorized(provided: string | undefined): boolean {
   return timingSafeEqual(a, b);
 }
 
+/**
+ * Read the contents of every file referenced by a file-mount env var.
+ *
+ * Obot secret bindings with `file: true` set the env var to a path under
+ * `/files/` rather than the raw value. This function finds all such vars,
+ * reads the files, and returns a map of `ENV_KEY → file content` so callers
+ * can verify end-to-end that the mounted file contains the expected value
+ * without shelling out to `kubectl exec`.
+ *
+ * Only paths that start with `/files/` are read — this prevents the function
+ * from becoming an arbitrary filesystem reader.
+ *
+ * When not authorized, file contents are replaced with REDACTED (same policy
+ * as env vars and headers).
+ */
+async function readFileMounts(
+  env: NodeJS.ProcessEnv,
+  authorized: boolean,
+): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(env)) {
+    if (typeof v === "string" && v.startsWith("/files/")) {
+      if (authorized) {
+        try {
+          out[k] = await readFile(v, "utf8");
+        } catch (err) {
+          out[k] = `<error reading ${v}: ${(err as Error).message}>`;
+        }
+      } else {
+        out[k] = REDACTED;
+      }
+    }
+  }
+  return out;
+}
+
 /** Replace every value in an env map with REDACTED. Keys are preserved. */
 function redactEnv(env: NodeJS.ProcessEnv): Record<string, string> {
   const out: Record<string, string> = {};
@@ -202,7 +239,7 @@ function buildServer(opts: CliOpts): McpServer {
     {
       title: "Reflect",
       description:
-        "Returns the command and args this server was launched with (including any arbitrary extras), env, and process metadata. Over the streamable HTTP transport, the response also includes inbound request headers. Header / env values are redacted by default — pass the `key` argument (printed on stderr at server startup) to receive unredacted output. Useful for verifying secret bindings, header propagation, env-var propagation, and runtime configuration of MCP server deployments.",
+        "Returns the command and args this server was launched with (including any arbitrary extras), env, process metadata, and the contents of any file-backed secret bindings (env vars whose value is a /files/... path). Over the streamable HTTP transport, the response also includes inbound request headers. Header / env / file values are redacted by default — pass the `key` argument (printed on stderr at server startup) to receive unredacted output. Useful for verifying secret bindings, file mounts, header propagation, env-var propagation, and runtime configuration of MCP server deployments.",
       inputSchema: {
         key: z
           .string()
@@ -231,6 +268,11 @@ function buildServer(opts: CliOpts): McpServer {
       const rawHeaders = requestInfo?.headers ?? null;
       const isHTTP = rawHeaders !== null;
 
+      // Read any file-backed secret bindings (env vars whose value is a
+      // /files/... path). Included on both transports so file mounts can be
+      // verified without kubectl exec.
+      const files = await readFileMounts(process.env, authorized);
+
       // Common fields, returned regardless of transport.
       const common = {
         // Full argv as captured at startup, byte-for-byte. Any arbitrary
@@ -257,6 +299,9 @@ function buildServer(opts: CliOpts): McpServer {
         // ********" from "we redacted a real value".
         redacted: !authorized,
         receivedAt: new Date().toISOString(),
+        // Contents of file-mount secret bindings (env vars pointing at
+        // /files/... paths). Empty object when no file mounts are configured.
+        files,
       };
 
       // Transport-conditional fields.

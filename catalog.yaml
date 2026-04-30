@@ -417,6 +417,139 @@
       description: Returns argv, env, cwd, pid, transport, and (for HTTP) request headers.
       params: {}
 
+- name: Reflect NPX (Bound File Mount)
+  shortDescription: Debug MCP server — Kubernetes-Secret-bound value mounted as a file
+  description: |
+    Reflect MCP server (npx variant). Exercises the `secretBinding.file: true`
+    code path: the Secret value is written to a file under `/files/` and the env
+    var REFLECT_FILE_MOUNT is set to that file path instead of the raw value.
+
+    This is useful when an application expects to read a credential from the
+    filesystem (certificates, service-account keys, config blobs) rather than
+    an environment variable.
+
+    Pre-create the Secret in the obot MCP deployments namespace before installing:
+
+        kubectl -n <mcp-namespace> create secret generic reflect-mcp-creds \
+          --from-literal=reflect_file_mount='hello-from-the-file-vault'
+
+    After install, call `reflect` and check two fields:
+
+    - `env["REFLECT_FILE_MOUNT"]` — the file path, e.g. `/files/ms...-REFLECT_FILE_MOUNT`
+    - `files["REFLECT_FILE_MOUNT"]` — the actual file content read from that path
+
+    Both are redacted without the echo key; pass the key (printed on stderr at
+    startup) to see the real values.
+
+    To verify the file content directly without the echo key:
+
+        kubectl -n <mcp-namespace> exec <pod> -- cat /files/ms...-REFLECT_FILE_MOUNT
+
+    When the Secret is deleted or the key is missing, the server refuses to start
+    (required=true) and obot surfaces the missing-secret error.
+
+    Compare with `Reflect NPX (Bound + Templated Args)` where the value reaches
+    the process as a plain env var. Here the process must open the file path
+    stored in the env var — the raw value never appears in `process.env`.
+  metadata:
+    categories: Developer Tools
+  icon: https://avatars.githubusercontent.com/u/4175918?v=4
+  repoURL: https://github.com/njhale/mcp-zoo
+  runtime: npx
+  npxConfig:
+    package: "@njhale/reflect-mcp"
+    args:
+      - --transport
+      - stdio
+      - --reflect-tag=bound-file-mount
+      - hello-from-file-mount
+  env:
+    - key: REFLECT_FILE_MOUNT
+      name: Reflect File Mount (Kubernetes Secret-bound, file)
+      description: |
+        Bound to a key in a pre-existing K8s Secret and mounted as a file.
+        The env var is set to the file path (/files/...) rather than the raw
+        value. required=true means the pod refuses to start if the Secret/key
+        is absent.
+      required: true
+      sensitive: true
+      secretBinding:
+        name: reflect-mcp-creds
+        key: reflect_file_mount
+        file: true
+  toolPreview:
+    - name: reflect
+      description: Returns argv, env, cwd, pid, transport, file-mount contents, and (for HTTP) request headers.
+      params: {}
+
+- name: Reflect NPX (Bound Dynamic File Mount)
+  shortDescription: Debug MCP server — Kubernetes-Secret-bound file that updates without pod restart
+  description: |
+    Reflect MCP server (npx variant). Exercises `secretBinding.file: true` with
+    `secretBinding.dynamic: true`: the Secret value is mounted as a file under
+    `/files/` and kubelet propagates updates to that file **without restarting
+    the pod** when the source Secret changes.
+
+    This is the right pattern for high-rotation secrets (short-lived tokens,
+    rotating API keys, certificates) where a full pod restart on every rotation
+    would cause unnecessary downtime.
+
+    Pre-create the Secret in the obot MCP deployments namespace before installing:
+
+        kubectl -n <mcp-namespace> create secret generic reflect-mcp-creds \
+          --from-literal=reflect_dyn_file='version-1'
+
+    After install, call `reflect` and check two fields:
+
+    - `env["REFLECT_DYN_FILE"]` — the file path, e.g. `/files/ms...-REFLECT_DYN_FILE`
+    - `files["REFLECT_DYN_FILE"]` — the actual file content read from that path
+
+    To verify live rotation without pod restart:
+
+      1. Note the pod name and start time:
+             kubectl -n <mcp-namespace> get pod -l mcp-server-scope=<name>
+      2. Update the Secret:
+             kubectl -n <mcp-namespace> patch secret reflect-mcp-creds \
+               --type=merge -p '{"stringData":{"reflect_dyn_file":"version-2"}}'
+      3. Connect again (triggers obot to refresh the mcp-files Secret).
+      4. Call `reflect` — `files["REFLECT_DYN_FILE"]` should now show "version-2"
+         while the pod age stays the same (no restart occurred).
+
+    Contrast with `Reflect NPX (Bound File Mount)` where a secret change causes
+    the pod to restart on the next connection.
+  metadata:
+    categories: Developer Tools
+  icon: https://avatars.githubusercontent.com/u/4175918?v=4
+  repoURL: https://github.com/njhale/mcp-zoo
+  runtime: npx
+  npxConfig:
+    package: "@njhale/reflect-mcp"
+    args:
+      - --transport
+      - stdio
+      - --reflect-tag=bound-dynamic-file-mount
+      - hello-from-dynamic-file-mount
+  env:
+    - key: REFLECT_DYN_FILE
+      name: Reflect Dynamic File Mount (Kubernetes Secret-bound, file + dynamic)
+      description: |
+        Bound to a key in a pre-existing K8s Secret, mounted as a file, and
+        marked dynamic so kubelet updates the mounted file in place when the
+        Secret rotates — no pod restart required. The env var contains the file
+        path (/files/...); the process must open it each time it needs the value
+        to pick up rotations.
+      required: true
+      sensitive: true
+      secretBinding:
+        name: reflect-mcp-creds
+        key: reflect_dyn_file
+        file: true
+        dynamic: true
+  toolPreview:
+    - name: reflect
+      description: Returns argv, env, cwd, pid, transport, file-mount contents, and (for HTTP) request headers.
+      params: {}
+
 - name: Reflect NPX (2 Bound + Templated Args)
   shortDescription: Debug MCP server — npx args templated by Kubernetes-Secret-bound env
   description: |
