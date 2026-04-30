@@ -320,6 +320,65 @@
       description: Returns argv, env, cwd, pid, transport, and (for HTTP) request headers.
       params: {}
 
+- name: Reflect NPX (Optional Bound + Templated Args)
+  shortDescription: Debug MCP server — npx arg templated by an optional Kubernetes-Secret-bound env
+  description: |
+    Reflect MCP server (npx variant). Exercises the optional secretBinding
+    (required: false) code path for a template-referenced env var.
+
+    The `--reflect-tag=${REFLECT_OPT_BOUND_TAG}` arg references a Kubernetes-
+    Secret-bound env var that is required=false. Two scenarios:
+
+    **Secret present**: Obot resolves the binding at deploy time and injects the
+    value via its managed k8s Secret; nanobot substitutes it into the arg at
+    startup. Call `reflect` and argv contains `--reflect-tag=<your value>`.
+
+    **Secret absent**: The pod still starts — no `CreateContainerConfigError`,
+    no "missing required config" error from Obot. Nanobot receives the env var
+    unset and leaves the literal `${REFLECT_OPT_BOUND_TAG}` in argv. Call
+    `reflect` and argv contains `--reflect-tag=${REFLECT_OPT_BOUND_TAG}`.
+
+    This is the intentional degraded-mode contract for optional bindings: the
+    server remains functional even without the Secret, which is useful when
+    the binding enriches rather than gates the server (e.g., an API key for
+    an optional feature that the server can skip when absent).
+
+    Pre-create the Secret before installing to exercise the happy path:
+
+        kubectl -n <mcp-namespace> create secret generic reflect-mcp-creds \
+          --from-literal=reflect_opt_bound_tag='hello-from-optional-vault'
+
+  metadata:
+    categories: Developer Tools
+  icon: https://avatars.githubusercontent.com/u/4175918?v=4
+  repoURL: https://github.com/njhale/mcp-zoo
+  runtime: npx
+  npxConfig:
+    package: "@njhale/reflect-mcp"
+    args:
+      - --transport
+      - stdio
+      - --reflect-tag=${REFLECT_OPT_BOUND_TAG}
+      - hello-from-optional-bound-template
+  env:
+    - key: REFLECT_OPT_BOUND_TAG
+      name: Reflect Optional Bound Tag (Kubernetes Secret-bound, optional)
+      description: |
+        Bound to a key in a pre-existing K8s Secret. required=false means the
+        server starts regardless of whether the Secret/key exists. When present,
+        the value is substituted into the --reflect-tag arg; when absent, the
+        literal "${REFLECT_OPT_BOUND_TAG}" placeholder remains in argv — the
+        server still runs and can degrade gracefully.
+      required: false
+      sensitive: true
+      secretBinding:
+        name: reflect-mcp-creds
+        key: reflect_opt_bound_tag
+  toolPreview:
+    - name: reflect
+      description: Returns argv, env, cwd, pid, transport, and (for HTTP) request headers.
+      params: {}
+
 - name: Reflect NPX (2 Bound + Templated Args)
   shortDescription: Debug MCP server — npx args templated by Kubernetes-Secret-bound env
   description: |
