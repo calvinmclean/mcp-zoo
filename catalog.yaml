@@ -13,7 +13,7 @@
 #                      header secret bindings, prefixing, etc.)
 
 - name: Bug Reproduce
-  shortDescription: Debug MCP server — npx single-user runtime (stdio)
+  shortDescription: Debug MCP server — npx args carry ${VAR} expanded by nanobot
   description: Debug MCP server — npx args carry ${VAR} expanded by nanobot
   metadata:
     categories: Developer Tools
