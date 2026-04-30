@@ -12,6 +12,41 @@
 #   - request headers (HTTP transports only — verifies header propagation,
 #                      header secret bindings, prefixing, etc.)
 
+- name: Bug Reproduce
+  shortDescription: Debug MCP server — npx single-user runtime (stdio)
+  description: Debug MCP server — npx args carry ${VAR} expanded by nanobot
+  metadata:
+    categories: Developer Tools
+  icon: https://avatars.githubusercontent.com/u/4175918?v=4
+  repoURL: https://github.com/njhale/mcp-zoo
+  runtime: npx
+  npxConfig:
+    package: "@njhale/reflect-mcp"
+    # The first three args drive the server. Anything after is arbitrary —
+    # reflect-mcp passes it through unchanged and surfaces it via
+    # `reflect`'s `argv` and `extraArgs` fields, so you can verify exactly
+    # how nanobot/obot construct argv for npx-launched servers.
+    args:
+      - --transport
+      - stdio
+      - --reflect-tag=npx-single-user
+      - hello-from-catalog
+  env:
+    - key: REFLECT_TEST_VALUE
+      name: Reflect Test Value
+      description: Plain test env var — round-tripped via the `reflect` tool's `env` field.
+      required: false
+      sensitive: false
+    - key: REFLECT_TEST_SECRET
+      name: Reflect Test Secret
+      description: Sensitive test env var — verifies sensitive value propagation end-to-end.
+      required: false
+      sensitive: true
+  toolPreview:
+    - name: reflect
+      description: Returns argv, env, cwd, pid, transport, and (for HTTP) request headers.
+      params: {}
+
 - name: Reflect NPX
   shortDescription: Debug MCP server — npx single-user runtime (stdio)
   description: |
