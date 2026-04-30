@@ -320,6 +320,74 @@
       description: Returns argv, env, cwd, pid, transport, and (for HTTP) request headers.
       params: {}
 
+- name: Reflect NPX (2 Bound + Templated Args)
+  shortDescription: Debug MCP server — npx args templated by Kubernetes-Secret-bound env
+  description: |
+    Reflect MCP server (npx variant). Verifies the full secret-binding
+    path through to template expansion.
+
+    The `--reflect-tag=${REFLECT_BOUND_TAG}` arg references an env var that
+    is itself bound to a key in a pre-existing Kubernetes Secret via
+    `secretBinding`. Kubelet projects the value onto the nanobot pod's env
+    via `valueFrom.secretKeyRef`; nanobot reads it via `os.Environ()` at
+    startup and substitutes it into the args before spawning the npx child.
+
+    Pre-create the Secret in the obot MCP deployments namespace before
+    installing this server:
+
+        kubectl -n <mcp-namespace> create secret generic reflect-mcp-creds \
+          --from-literal=reflect_npx_tag='hello-from-the-vault'
+
+    After install, call `reflect` and check `argv` — you should see
+    `--reflect-tag=hello-from-the-vault`. Obot never sees the value.
+
+    `required: true` matters here for two reasons:
+      1. The obot validator requires it because the env is templated.
+      2. With `required: false` and a missing Secret/key, kubelet would
+         start the pod with the env unset, nanobot's `envvar.ReplaceString`
+         would fall through, and the literal "${REFLECT_BOUND_TAG}" would
+         end up in argv. With `required: true`, kubelet refuses to start
+         the pod and obot's deployment controller surfaces the error.
+  metadata:
+    categories: Developer Tools
+  icon: https://avatars.githubusercontent.com/u/4175918?v=4
+  repoURL: https://github.com/njhale/mcp-zoo
+  runtime: npx
+  npxConfig:
+    package: "@njhale/reflect-mcp"
+    args:
+      - --transport
+      - stdio
+      - --reflect-tag=${REFLECT_BOUND_TAG_1}/${REFLECT_BOUND_TAG_2}
+      - hello-from-bound-template
+  env:
+    - key: REFLECT_BOUND_TAG_1
+      name: Reflect Bound Tag (Kubernetes Secret-bound)
+      description: |
+        Bound to a key in a pre-existing K8s Secret. Required=true so the
+        pod fails closed at startup if the Secret/key is missing, AND so
+        the obot template-reference validator accepts it.
+      required: true
+      sensitive: true
+      secretBinding:
+        name: reflect-mcp-creds
+        key: reflect_npx_tag_1
+    - key: REFLECT_BOUND_TAG_2
+      name: Reflect Bound Tag (Kubernetes Secret-bound)
+      description: |
+        Bound to a key in a pre-existing K8s Secret. Required=true so the
+        pod fails closed at startup if the Secret/key is missing, AND so
+        the obot template-reference validator accepts it.
+      required: true
+      sensitive: true
+      secretBinding:
+        name: reflect-mcp-creds
+        key: reflect_npx_tag_2
+  toolPreview:
+    - name: reflect
+      description: Returns argv, env, cwd, pid, transport, and (for HTTP) request headers.
+      params: {}
+
 - name: Reflect Containerized (Templated Args — Known Gap)
   shortDescription: Debug MCP server — containerized args templated by env (currently broken)
   description: |
