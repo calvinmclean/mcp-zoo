@@ -355,28 +355,30 @@
       description: Returns argv, env, cwd, pid, transport, and (for HTTP) request headers.
       params: {}
 
-- name: Reflect NPX (Optional Bound + Templated Args)
-  shortDescription: Debug MCP server — npx arg templated by an optional Kubernetes-Secret-bound env
+- name: Reflect NPX (Optional Bound Env)
+  shortDescription: Debug MCP server — optional Kubernetes-Secret-bound env var (not used in args template)
   description: |
     Reflect MCP server (npx variant). Exercises the optional secretBinding
-    (required: false) code path for a template-referenced env var.
+    (required: false) code path for a plain env var — NOT used in any
+    command/args template.
 
-    The `--reflect-tag=${REFLECT_OPT_BOUND_TAG}` arg references a Kubernetes-
-    Secret-bound env var that is required=false. Two scenarios:
+    The env var REFLECT_OPT_BOUND_TAG is bound to a pre-existing Kubernetes
+    Secret but marked required=false. Two scenarios:
 
-    **Secret present**: Obot resolves the binding at deploy time and injects the
-    value via its managed k8s Secret; nanobot substitutes it into the arg at
-    startup. Call `reflect` and argv contains `--reflect-tag=<your value>`.
+    **Secret present**: Obot resolves the binding at deploy time and injects
+    the value as an env var on the nanobot pod. Call `reflect` and check
+    `env["REFLECT_OPT_BOUND_TAG"]` — you should see your value.
 
     **Secret absent**: The pod still starts — no `CreateContainerConfigError`,
-    no "missing required config" error from Obot. Nanobot receives the env var
-    unset and leaves the literal `${REFLECT_OPT_BOUND_TAG}` in argv. Call
-    `reflect` and argv contains `--reflect-tag=${REFLECT_OPT_BOUND_TAG}`.
+    no "missing required config" error from Obot. The env var is simply absent
+    from the process. Call `reflect` and `env["REFLECT_OPT_BOUND_TAG"]` will
+    be missing from the output entirely.
 
-    This is the intentional degraded-mode contract for optional bindings: the
-    server remains functional even without the Secret, which is useful when
-    the binding enriches rather than gates the server (e.g., an API key for
-    an optional feature that the server can skip when absent).
+    Note: optional bound vars must NOT appear in command/args/URL templates
+    (e.g., `--flag=${REFLECT_OPT_BOUND_TAG}`). A missing value would produce
+    a literal `${VAR}` placeholder on the wire, which is confusing behavior
+    that the obot validator rejects. Optional bindings are appropriate for
+    env vars the server logic reads directly at runtime and can handle absent.
 
     Pre-create the Secret before installing to exercise the happy path:
 
@@ -393,17 +395,18 @@
     args:
       - --transport
       - stdio
-      - --reflect-tag=${REFLECT_OPT_BOUND_TAG}
-      - hello-from-optional-bound-template
+      - --reflect-tag=optional-bound-env
+      - hello-from-optional-bound
   env:
     - key: REFLECT_OPT_BOUND_TAG
       name: Reflect Optional Bound Tag (Kubernetes Secret-bound, optional)
       description: |
         Bound to a key in a pre-existing K8s Secret. required=false means the
         server starts regardless of whether the Secret/key exists. When present,
-        the value is substituted into the --reflect-tag arg; when absent, the
-        literal "${REFLECT_OPT_BOUND_TAG}" placeholder remains in argv — the
-        server still runs and can degrade gracefully.
+        the value appears in `reflect`'s `env` output; when absent, the key is
+        simply missing from the process environment — the server still runs.
+        This var is intentionally NOT referenced in args to avoid the literal
+        "${VAR}" placeholder problem.
       required: false
       sensitive: true
       secretBinding:
