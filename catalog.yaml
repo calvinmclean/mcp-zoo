@@ -149,7 +149,7 @@
   shortDescription: Debug MCP server — remote runtime (HTTP, hosted) with a Kubernetes-Secret-bound header
   description: |
     Reflect MCP server (remote variant). Points at the hosted instance at
-    `https://reflect.hale.sh/mcp`. Nanobot acts as the proxy and forwards
+    `http://localhost:8099/mcp`. Nanobot acts as the proxy and forwards
     each MCP request — synthesizing the configured headers — to the
     remote URL. The `reflect` tool returns:
 
@@ -187,7 +187,7 @@
   repoURL: https://github.com/calvinmclean/mcp-zoo
   runtime: remote
   remoteConfig:
-    fixedURL: https://reflect.hale.sh/mcp
+    fixedURL: http://localhost:8099/mcp
     headers:
       - key: X-Reflect-Test
         name: Reflect Test Header (static)
@@ -824,7 +824,7 @@
     The hostname's leading subdomain comes from a Kubernetes-Secret-bound
     env: `urlTemplate: https://${SUB_DOMAIN}.hale.sh/mcp`. With the
     Secret containing `sub_domain=reflect`, nanobot should dial
-    `https://reflect.hale.sh/mcp`. Currently it dials the literal
+    `http://localhost:8099/mcp`. Currently it dials the literal
     `https://${SUB_DOMAIN}.hale.sh/mcp`, DNS resolution fails, and the
     connection errors out — failure is loud, which makes this a useful
     smoke test.
@@ -926,7 +926,7 @@
   repoURL: https://github.com/calvinmclean/mcp-zoo
   runtime: remote
   remoteConfig:
-    fixedURL: https://reflect.hale.sh/mcp
+    fixedURL: http://localhost:8099/mcp
     headers:
       - key: Authorization-Static
         name: Authorization (static + prefix)
