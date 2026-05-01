@@ -166,7 +166,6 @@ function isAuthorized(provided: string | undefined): boolean {
  */
 async function readFileMounts(
   env: NodeJS.ProcessEnv,
-  authorized: boolean,
 ): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
   const candidates = Object.entries(env).filter(
@@ -178,21 +177,20 @@ async function readFileMounts(
   );
   for (const [k, v] of candidates) {
     process.stderr.write(`[readFileMounts] key=${k} path=${v}\n`);
-    if (authorized) {
-      try {
-        const content = await readFile(v as string, "utf8");
-        process.stderr.write(
-          `[readFileMounts] read ok: ${content.length} bytes\n`,
-        );
-        out[k] = content;
-      } catch (err) {
-        const msg = `<error reading ${v}: ${(err as Error).message}>`;
-        process.stderr.write(`[readFileMounts] read error: ${msg}\n`);
-        out[k] = msg;
-      }
-    } else {
-      process.stderr.write(`[readFileMounts] not authorized — redacting\n`);
-      out[k] = REDACTED;
+    // File contents are always returned unredacted — the purpose of this field
+    // is to verify that a mounted file has the expected value, which requires
+    // seeing the content. The key gate applies to env vars and headers where
+    // key names alone can reveal credential metadata.
+    try {
+      const content = await readFile(v as string, "utf8");
+      process.stderr.write(
+        `[readFileMounts] read ok: ${content.length} bytes\n`,
+      );
+      out[k] = content;
+    } catch (err) {
+      const msg = `<error reading ${v}: ${(err as Error).message}>`;
+      process.stderr.write(`[readFileMounts] read error: ${msg}\n`);
+      out[k] = msg;
     }
   }
   return out;
@@ -284,7 +282,7 @@ function buildServer(opts: CliOpts): McpServer {
       // Read any file-backed secret bindings (env vars whose value is a
       // /files/... path). Included on both transports so file mounts can be
       // verified without kubectl exec.
-      const files = await readFileMounts(process.env, authorized);
+      const files = await readFileMounts(process.env);
 
       // Common fields, returned regardless of transport.
       const common = {
