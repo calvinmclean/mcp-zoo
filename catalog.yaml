@@ -618,6 +618,84 @@
       description: Returns argv, env, cwd, pid, transport, and (for HTTP) request headers.
       params: {}
 
+- name: Reflect NPX (Multi-Secret Bindings)
+  shortDescription: Debug MCP server — env vars bound to two different Kubernetes Secrets
+  description: |
+    Reflect MCP server (npx variant). Exercises binding env vars to two
+    *different* Kubernetes Secrets in a single catalog entry.
+
+    Two env vars are bound to separate Secrets:
+
+      - REFLECT_SECRET_A → reflect-mcp-creds-a / secret_a
+      - REFLECT_SECRET_B → reflect-mcp-creds-b / secret_b
+
+    This demonstrates independent secret-watch tracks: obot watches both
+    Secrets and computes a separate content hash for each one. Rotating
+    only `reflect-mcp-creds-a` triggers a redeploy (and only changes the
+    hash derived from that Secret's referenced keys); `reflect-mcp-creds-b`
+    is unaffected and its hash is unchanged.
+
+    Compare with `Reflect NPX (2 Bound + Templated Args)` where both keys
+    come from the *same* Secret — any change to that Secret recomputes
+    a single hash covering both keys.
+
+    Pre-create both Secrets before installing:
+
+        kubectl -n <mcp-namespace> create secret generic reflect-mcp-creds-a \
+          --from-literal=secret_a='value-from-secret-a'
+
+        kubectl -n <mcp-namespace> create secret generic reflect-mcp-creds-b \
+          --from-literal=secret_b='value-from-secret-b'
+
+    After install, call `reflect` and check `env`:
+      - `REFLECT_SECRET_A` → "value-from-secret-a"
+      - `REFLECT_SECRET_B` → "value-from-secret-b"
+
+    To verify independent rotation: update only `reflect-mcp-creds-a` and
+    reconnect — the server redeploys and `REFLECT_SECRET_A` shows the new
+    value while `REFLECT_SECRET_B` is unchanged.
+  metadata:
+    categories: Developer Tools
+  icon: https://avatars.githubusercontent.com/u/4175918?v=4
+  repoURL: https://github.com/calvinmclean/mcp-zoo
+  runtime: npx
+  npxConfig:
+    package: "@calvinmclean/reflect-mcp"
+    args:
+      - --transport
+      - stdio
+      - --reflect-tag=multi-secret
+      - hello-from-multi-secret
+  env:
+    - key: REFLECT_SECRET_A
+      name: Reflect Secret A (from reflect-mcp-creds-a)
+      description: |
+        Bound to key `secret_a` in the `reflect-mcp-creds-a` Secret.
+        Appears in `reflect`'s `env` output as REFLECT_SECRET_A.
+        Changing only this Secret triggers a redeploy without affecting
+        the hash derived from reflect-mcp-creds-b.
+      required: true
+      sensitive: true
+      secretBinding:
+        name: reflect-mcp-creds-a
+        key: secret_a
+    - key: REFLECT_SECRET_B
+      name: Reflect Secret B (from reflect-mcp-creds-b)
+      description: |
+        Bound to key `secret_b` in the `reflect-mcp-creds-b` Secret.
+        Appears in `reflect`'s `env` output as REFLECT_SECRET_B.
+        Changing only this Secret triggers a redeploy without affecting
+        the hash derived from reflect-mcp-creds-a.
+      required: true
+      sensitive: true
+      secretBinding:
+        name: reflect-mcp-creds-b
+        key: secret_b
+  toolPreview:
+    - name: reflect
+      description: Returns argv, env, cwd, pid, transport, and (for HTTP) request headers.
+      params: {}
+
 - name: Reflect Containerized (Templated Args — Known Gap)
   shortDescription: Debug MCP server — containerized args templated by env (currently broken)
   description: |
