@@ -169,17 +169,30 @@ async function readFileMounts(
   authorized: boolean,
 ): Promise<Record<string, string>> {
   const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(env)) {
-    if (typeof v === "string" && v.startsWith("/files/")) {
-      if (authorized) {
-        try {
-          out[k] = await readFile(v, "utf8");
-        } catch (err) {
-          out[k] = `<error reading ${v}: ${(err as Error).message}>`;
-        }
-      } else {
-        out[k] = REDACTED;
+  const candidates = Object.entries(env).filter(
+    ([, v]) => typeof v === "string" && v.startsWith("/files/"),
+  );
+  process.stderr.write(
+    `[readFileMounts] scanning env: ${Object.keys(env).length} vars, ` +
+      `${candidates.length} candidate(s) with /files/ prefix\n`,
+  );
+  for (const [k, v] of candidates) {
+    process.stderr.write(`[readFileMounts] key=${k} path=${v}\n`);
+    if (authorized) {
+      try {
+        const content = await readFile(v as string, "utf8");
+        process.stderr.write(
+          `[readFileMounts] read ok: ${content.length} bytes\n`,
+        );
+        out[k] = content;
+      } catch (err) {
+        const msg = `<error reading ${v}: ${(err as Error).message}>`;
+        process.stderr.write(`[readFileMounts] read error: ${msg}\n`);
+        out[k] = msg;
       }
+    } else {
+      process.stderr.write(`[readFileMounts] not authorized — redacting\n`);
+      out[k] = REDACTED;
     }
   }
   return out;
