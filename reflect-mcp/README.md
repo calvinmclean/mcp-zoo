@@ -244,7 +244,7 @@ pnpm dev           # terminal 1: tsx server on :8099
 pnpm tunnel        # terminal 2: cloudflared → http://localhost:8099
 ```
 
-Once it's up, hit `http://localhost:8099/mcp` from any MCP client.
+Once it's up, hit `http://mcp-zoo.obot-mcp.svc.cluster.local/mcp` from any MCP client.
 
 ### Publishing to npm
 
