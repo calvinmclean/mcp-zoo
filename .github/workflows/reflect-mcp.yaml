@@ -2,7 +2,7 @@ name: reflect-mcp
 
 # Build a multi-arch (linux/amd64, linux/arm64) image of reflect-mcp and push
 # it to GHCR on every push. The tag is the (sanitized) branch name, so a push
-# to `main` produces `ghcr.io/njhale/mcp-zoo/reflect-mcp:main`.
+# to `main` produces `ghcr.io/calvinmclean/mcp-zoo/reflect-mcp:main`.
 on:
   push:
     branches:
@@ -18,7 +18,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: njhale/mcp-zoo/reflect-mcp
+  IMAGE_NAME: calvinmclean/mcp-zoo/reflect-mcp
 
 jobs:
   build-and-push:

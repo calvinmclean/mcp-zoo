@@ -18,10 +18,10 @@
   metadata:
     categories: Developer Tools
   icon: https://avatars.githubusercontent.com/u/4175918?v=4
-  repoURL: https://github.com/njhale/mcp-zoo
+  repoURL: https://github.com/calvinmclean/mcp-zoo
   runtime: npx
   npxConfig:
-    package: "@njhale/reflect-mcp"
+    package: "@calvinmclean/reflect-mcp"
     # The first three args drive the server. Anything after is arbitrary —
     # reflect-mcp passes it through unchanged and surfaces it via
     # `reflect`'s `argv` and `extraArgs` fields, so you can verify exactly
@@ -63,10 +63,10 @@
   metadata:
     categories: Developer Tools
   icon: https://avatars.githubusercontent.com/u/4175918?v=4
-  repoURL: https://github.com/njhale/mcp-zoo
+  repoURL: https://github.com/calvinmclean/mcp-zoo
   runtime: npx
   npxConfig:
-    package: "@njhale/reflect-mcp"
+    package: "@calvinmclean/reflect-mcp"
     # The first three args drive the server. Anything after is arbitrary —
     # reflect-mcp passes it through unchanged and surfaces it via
     # `reflect`'s `argv` and `extraArgs` fields, so you can verify exactly
@@ -96,7 +96,7 @@
   shortDescription: Debug MCP server — containerized runtime (HTTP)
   description: |
     Reflect MCP server (containerized variant). Runs from the prebuilt image
-    `ghcr.io/njhale/mcp-zoo/reflect-mcp:main` and serves the streamable HTTP
+    `ghcr.io/calvinmclean/mcp-zoo/reflect-mcp:main` and serves the streamable HTTP
     transport on port 8099 at `/mcp`. The `reflect` tool returns:
 
       - the command and args the container was started with
@@ -111,10 +111,10 @@
     categories: Developer Tools
     allow-multiple: "true"
   icon: https://avatars.githubusercontent.com/u/4175918?v=4
-  repoURL: https://github.com/njhale/mcp-zoo
+  repoURL: https://github.com/calvinmclean/mcp-zoo
   runtime: containerized
   containerizedConfig:
-    image: ghcr.io/njhale/mcp-zoo/reflect-mcp:main
+    image: ghcr.io/calvinmclean/mcp-zoo/reflect-mcp:main
     port: 8099
     path: /mcp
     # Real flags first, then arbitrary pass-through args that show up in the
@@ -184,7 +184,7 @@
     categories: Developer Tools
     allow-multiple: "true"
   icon: https://avatars.githubusercontent.com/u/4175918?v=4
-  repoURL: https://github.com/njhale/mcp-zoo
+  repoURL: https://github.com/calvinmclean/mcp-zoo
   runtime: remote
   remoteConfig:
     fixedURL: https://reflect.hale.sh/mcp
@@ -275,10 +275,10 @@
   metadata:
     categories: Developer Tools
   icon: https://avatars.githubusercontent.com/u/4175918?v=4
-  repoURL: https://github.com/njhale/mcp-zoo
+  repoURL: https://github.com/calvinmclean/mcp-zoo
   runtime: npx
   npxConfig:
-    package: "@njhale/reflect-mcp"
+    package: "@calvinmclean/reflect-mcp"
     args:
       - --transport
       - stdio
@@ -329,10 +329,10 @@
   metadata:
     categories: Developer Tools
   icon: https://avatars.githubusercontent.com/u/4175918?v=4
-  repoURL: https://github.com/njhale/mcp-zoo
+  repoURL: https://github.com/calvinmclean/mcp-zoo
   runtime: npx
   npxConfig:
-    package: "@njhale/reflect-mcp"
+    package: "@calvinmclean/reflect-mcp"
     args:
       - --transport
       - stdio
@@ -388,10 +388,10 @@
   metadata:
     categories: Developer Tools
   icon: https://avatars.githubusercontent.com/u/4175918?v=4
-  repoURL: https://github.com/njhale/mcp-zoo
+  repoURL: https://github.com/calvinmclean/mcp-zoo
   runtime: npx
   npxConfig:
-    package: "@njhale/reflect-mcp"
+    package: "@calvinmclean/reflect-mcp"
     args:
       - --transport
       - stdio
@@ -454,10 +454,10 @@
   metadata:
     categories: Developer Tools
   icon: https://avatars.githubusercontent.com/u/4175918?v=4
-  repoURL: https://github.com/njhale/mcp-zoo
+  repoURL: https://github.com/calvinmclean/mcp-zoo
   runtime: npx
   npxConfig:
-    package: "@njhale/reflect-mcp"
+    package: "@calvinmclean/reflect-mcp"
     args:
       - --transport
       - stdio
@@ -520,10 +520,10 @@
   metadata:
     categories: Developer Tools
   icon: https://avatars.githubusercontent.com/u/4175918?v=4
-  repoURL: https://github.com/njhale/mcp-zoo
+  repoURL: https://github.com/calvinmclean/mcp-zoo
   runtime: npx
   npxConfig:
-    package: "@njhale/reflect-mcp"
+    package: "@calvinmclean/reflect-mcp"
     args:
       - --transport
       - stdio
@@ -581,10 +581,10 @@
   metadata:
     categories: Developer Tools
   icon: https://avatars.githubusercontent.com/u/4175918?v=4
-  repoURL: https://github.com/njhale/mcp-zoo
+  repoURL: https://github.com/calvinmclean/mcp-zoo
   runtime: npx
   npxConfig:
-    package: "@njhale/reflect-mcp"
+    package: "@calvinmclean/reflect-mcp"
     args:
       - --transport
       - stdio
@@ -641,10 +641,10 @@
     categories: Developer Tools
     allow-multiple: "true"
   icon: https://avatars.githubusercontent.com/u/4175918?v=4
-  repoURL: https://github.com/njhale/mcp-zoo
+  repoURL: https://github.com/calvinmclean/mcp-zoo
   runtime: containerized
   containerizedConfig:
-    image: ghcr.io/njhale/mcp-zoo/reflect-mcp:main
+    image: ghcr.io/calvinmclean/mcp-zoo/reflect-mcp:main
     port: 8099
     path: /mcp
     args:
@@ -703,10 +703,10 @@
     categories: Developer Tools
     allow-multiple: "true"
   icon: https://avatars.githubusercontent.com/u/4175918?v=4
-  repoURL: https://github.com/njhale/mcp-zoo
+  repoURL: https://github.com/calvinmclean/mcp-zoo
   runtime: containerized
   containerizedConfig:
-    image: ghcr.io/njhale/mcp-zoo/reflect-mcp:main
+    image: ghcr.io/calvinmclean/mcp-zoo/reflect-mcp:main
     port: 8099
     path: /mcp
     args:
@@ -776,7 +776,7 @@
     categories: Developer Tools
     allow-multiple: "true"
   icon: https://avatars.githubusercontent.com/u/4175918?v=4
-  repoURL: https://github.com/njhale/mcp-zoo
+  repoURL: https://github.com/calvinmclean/mcp-zoo
   runtime: remote
   remoteConfig:
     urlTemplate: https://${SUB_DOMAIN}.hale.sh/mcp
@@ -845,7 +845,7 @@
     categories: Developer Tools
     allow-multiple: "true"
   icon: https://avatars.githubusercontent.com/u/4175918?v=4
-  repoURL: https://github.com/njhale/mcp-zoo
+  repoURL: https://github.com/calvinmclean/mcp-zoo
   runtime: remote
   remoteConfig:
     fixedURL: https://reflect.hale.sh/mcp

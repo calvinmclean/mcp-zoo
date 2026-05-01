@@ -1,4 +1,4 @@
-# @njhale/reflect-mcp
+# @calvinmclean/reflect-mcp
 
 A debug MCP server with one tool — `echo` — that returns the command and args this process was launched with, the environment it sees, and (when running over HTTP) the inbound request headers.
 
@@ -15,29 +15,29 @@ Useful for verifying [obot](https://github.com/obot-platform/obot) / [nanobot](h
 
 ```bash
 # stdio
-npx @njhale/reflect-mcp --transport stdio
+npx @calvinmclean/reflect-mcp --transport stdio
 
 # streamable HTTP on :8099/mcp
-npx @njhale/reflect-mcp --transport http-streamable --port 8099 --path /mcp
+npx @calvinmclean/reflect-mcp --transport http-streamable --port 8099 --path /mcp
 ```
 
 ### From the prebuilt container image
 
 ```bash
 docker run --rm -p 8099:8099 \
-  ghcr.io/njhale/mcp-zoo/reflect-mcp:main
+  ghcr.io/calvinmclean/mcp-zoo/reflect-mcp:main
 ```
 
 The default `CMD` runs the streamable HTTP transport on `:8099/mcp`. Override `CMD` to use stdio:
 
 ```bash
-docker run --rm -i ghcr.io/njhale/mcp-zoo/reflect-mcp:main --transport stdio
+docker run --rm -i ghcr.io/calvinmclean/mcp-zoo/reflect-mcp:main --transport stdio
 ```
 
 ### From source
 
 ```bash
-git clone https://github.com/njhale/mcp-zoo
+git clone https://github.com/calvinmclean/mcp-zoo
 cd mcp-zoo/reflect-mcp
 pnpm install
 pnpm run build
@@ -173,7 +173,7 @@ Three obot catalog entries shipped from this repo's [`catalog.yaml`](../catalog.
 # npx, single-user, stdio
 - runtime: npx
   npxConfig:
-    package: "@njhale/reflect-mcp"
+    package: "@calvinmclean/reflect-mcp"
     args: [--transport, stdio, --reflect-tag=npx-single-user, hello-from-catalog]
   env:
     - { key: REFLECT_TEST_VALUE,  required: false, sensitive: false }
@@ -182,7 +182,7 @@ Three obot catalog entries shipped from this repo's [`catalog.yaml`](../catalog.
 # containerized, multi-user, HTTP
 - runtime: containerized
   containerizedConfig:
-    image: ghcr.io/njhale/mcp-zoo/reflect-mcp:main
+    image: ghcr.io/calvinmclean/mcp-zoo/reflect-mcp:main
     port: 8099
     path: /mcp
     args: [--transport, http-streamable, --port, "8099", --path, /mcp, --reflect-tag=containerized, hello-from-catalog]
@@ -272,7 +272,7 @@ docker run --rm -p 8099:8099 reflect-mcp:local
 docker buildx create --name multiarch --use --bootstrap   # one-time
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  -t ghcr.io/njhale/mcp-zoo/reflect-mcp:dev \
+  -t ghcr.io/calvinmclean/mcp-zoo/reflect-mcp:dev \
   --push .
 ```
 

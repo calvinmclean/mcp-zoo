@@ -1,6 +1,6 @@
 name: reflect-mcp npm
 
-# Publish @njhale/reflect-mcp to npmjs.org on push to main, using npm Trusted
+# Publish @calvinmclean/reflect-mcp to npmjs.org on push to main, using npm Trusted
 # Publishers (OIDC). No NPM_TOKEN secret — npm verifies the OIDC token minted
 # by GitHub Actions and issues a short-lived publish credential.
 #
@@ -11,12 +11,12 @@ name: reflect-mcp npm
 # intended forcing function for deliberate releases.
 #
 # Setup steps on the npm side (one-time, in npmjs.com UI):
-#   1. Sign in as a user who can publish @njhale/reflect-mcp.
-#   2. Visit:  https://www.npmjs.com/package/@njhale/reflect-mcp/access
+#   1. Sign in as a user who can publish @calvinmclean/reflect-mcp.
+#   2. Visit:  https://www.npmjs.com/package/@calvinmclean/reflect-mcp/access
 #      (or, before the first publish, your account's "Publishing access" page
 #      and create a "Pending trusted publisher").
 #   3. Add a GitHub Actions trusted publisher with:
-#        Repository owner:   njhale
+#        Repository owner:   calvinmclean
 #        Repository name:    mcp-zoo
 #        Workflow filename:  reflect-mcp-npm.yaml
 #   4. Save. From that point on this workflow can publish without any secret.

@@ -1,17 +1,17 @@
 {
-  "name": "@njhale/reflect-mcp",
+  "name": "@calvinmclean/reflect-mcp",
   "version": "0.0.2",
   "description": "Debug MCP server that echoes its launch command/args, env, and inbound HTTP headers via a single 'echo' tool.",
   "license": "MIT",
-  "author": "njhale",
+  "author": "calvinmclean",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/njhale/mcp-zoo.git",
+    "url": "git+https://github.com/calvinmclean/mcp-zoo.git",
     "directory": "reflect-mcp"
   },
-  "homepage": "https://github.com/njhale/mcp-zoo/tree/main/reflect-mcp#readme",
+  "homepage": "https://github.com/calvinmclean/mcp-zoo/tree/main/reflect-mcp#readme",
   "bugs": {
-    "url": "https://github.com/njhale/mcp-zoo/issues"
+    "url": "https://github.com/calvinmclean/mcp-zoo/issues"
   },
   "type": "module",
   "main": "dist/index.js",

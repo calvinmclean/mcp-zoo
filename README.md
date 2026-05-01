@@ -12,7 +12,7 @@ mcp-zoo/
 ├── reflect-mcp/                  # debug MCP server: echoes argv, env, headers
 │   ├── src/                      # TypeScript sources
 │   ├── Dockerfile                # multi-stage chainguard build
-│   ├── package.json              # publishes as @njhale/reflect-mcp
+│   ├── package.json              # publishes as @calvinmclean/reflect-mcp
 │   └── README.md
 └── .github/workflows/            # CI: docker build/push, optional npm publish
 ```
@@ -27,7 +27,7 @@ mcp-zoo/
 
 Point an obot `MCPCatalog` at this repo:
 
-1. In **Admin → MCP Servers → Catalogs**, add a catalog source with URL `https://github.com/njhale/mcp-zoo`.
+1. In **Admin → MCP Servers → Catalogs**, add a catalog source with URL `https://github.com/calvinmclean/mcp-zoo`.
 2. obot's `mcpcatalog` controller clones the repo, walks `catalog.yaml`, and creates one `MCPServerCatalogEntry` per list element.
 3. The entries become available in the regular MCP server picker.
 
