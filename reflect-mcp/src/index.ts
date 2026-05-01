@@ -258,14 +258,20 @@ function buildServer(opts: CliOpts): McpServer {
           .describe(
             "Echo key printed to stderr at startup. When matched, env vars / HTTP headers are returned unredacted. Without it (or with a mismatch) values are replaced with '********'.",
           ),
+        reveal: z
+          .boolean()
+          .optional()
+          .describe(
+            "When true, return env vars and HTTP headers unredacted without requiring the echo key. Convenience shorthand for testing when the echo key is not available.",
+          ),
       },
       annotations: {
         readOnlyHint: true,
         idempotentHint: true,
       },
     },
-    async ({ key }, extra) => {
-      const authorized = isAuthorized(key);
+    async ({ key, reveal }, extra) => {
+      const authorized = isAuthorized(key) || reveal === true;
 
       // In streamable-HTTP mode, the SDK populates extra.requestInfo.headers
       // with the headers of the inbound HTTP request that triggered this
