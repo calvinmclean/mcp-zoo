@@ -1,6 +1,6 @@
 {
   "name": "@calvinmclean/reflect-mcp",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Debug MCP server that echoes its launch command/args, env, and inbound HTTP headers via a single 'echo' tool.",
   "license": "MIT",
   "author": "calvinmclean",
