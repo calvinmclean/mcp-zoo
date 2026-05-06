@@ -193,7 +193,7 @@
   shortDescription: Debug MCP server — remote runtime (HTTP, hosted) with a Kubernetes-Secret-bound header
   description: |
     Reflect MCP server (remote variant). Points at the hosted instance at
-    `http://mcp-zoo.obot-mcp.svc.cluster.local/mcp`. Nanobot acts as the proxy and forwards
+    `http://mcp-zoo.default.svc.cluster.local/mcp`. Nanobot acts as the proxy and forwards
     each MCP request — synthesizing the configured headers — to the
     remote URL. The `reflect` tool returns:
 
@@ -231,7 +231,7 @@
   repoURL: https://github.com/calvinmclean/mcp-zoo
   runtime: remote
   remoteConfig:
-    fixedURL: http://mcp-zoo.obot-mcp.svc.cluster.local/mcp
+    fixedURL: http://mcp-zoo.default.svc.cluster.local/mcp
     headers:
       - key: X-Reflect-Test
         name: Reflect Test Header (static)
@@ -936,7 +936,7 @@
   repoURL: https://github.com/calvinmclean/mcp-zoo
   runtime: remote
   remoteConfig:
-    fixedURL: http://mcp-zoo.obot-mcp.svc.cluster.local/mcp
+    fixedURL: http://mcp-zoo.default.svc.cluster.local/mcp
     headers:
       - key: Authorization-Static
         name: Authorization (static + prefix)
