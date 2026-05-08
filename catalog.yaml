@@ -464,7 +464,7 @@
 - name: Reflect NPX (Bound File Mount)
   shortDescription: Debug MCP server — Kubernetes-Secret-bound value mounted as a file
   description: |
-    Reflect MCP server (npx variant). Exercises the `secretBinding.file: true`
+    Reflect MCP server (npx variant). Exercises the `file: true`
     code path: the Secret value is written to a file under `/files/` and the env
     var REFLECT_FILE_MOUNT is set to that file path instead of the raw value.
 
@@ -517,10 +517,10 @@
         is absent.
       required: true
       sensitive: true
+      file: true
       secretBinding:
         name: reflect-mcp-creds
         key: reflect_file_mount
-        file: true
   toolPreview:
     - name: reflect
       description: Returns argv, env, cwd, pid, transport, file-mount contents, and (for HTTP) request headers.
@@ -529,8 +529,8 @@
 - name: Reflect NPX (Bound Dynamic File Mount)
   shortDescription: Debug MCP server — Kubernetes-Secret-bound file that updates without pod restart
   description: |
-    Reflect MCP server (npx variant). Exercises `secretBinding.file: true` with
-    `secretBinding.dynamic: true`: the Secret value is mounted as a file under
+    Reflect MCP server (npx variant). Exercises `file: true` with
+    `dynamicFile: true`: the Secret value is mounted as a file under
     `/files/` and kubelet propagates updates to that file **without restarting
     the pod** when the source Secret changes.
 
@@ -584,11 +584,11 @@
         to pick up rotations.
       required: true
       sensitive: true
+      file: true
+      dynamicFile: true
       secretBinding:
         name: reflect-mcp-creds
         key: reflect_dyn_file
-        file: true
-        dynamic: true
   toolPreview:
     - name: reflect
       description: Returns argv, env, cwd, pid, transport, file-mount contents, and (for HTTP) request headers.
